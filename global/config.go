@@ -5,15 +5,16 @@ import (
 )
 
 type Config struct {
-	TcpServer        wiface.IServer
-	Name             string `json:"name"` //当前服务的名称
-	Host             string `json:"host"`
-	Port             int    `json:"port"`
-	Version          string `json:"version"`             //当前框架的版本
-	MaxPacketSize    uint32 `json:"max_packet_size"`     //数据包大小
-	MaxConn          int    `json:"max_conn"`            //最大连接数
-	WorkerPoolSize   uint32 `json:"worker_pool_size"`    //工作池的数量
-	MaxWorkerTaskLen uint32 `json:"max_worker_task_len"` //worker对应的队列的最大长度
+	TcpServer         wiface.IServer
+	Name              string `json:"name"` //当前服务的名称
+	Host              string `json:"host"`
+	Port              int    `json:"port"`
+	Version           string `json:"version"`               //当前框架的版本
+	MaxPacketSize     uint32 `json:"max_packet_size"`       //数据包大小
+	MaxConn           int    `json:"max_conn"`              //最大连接数
+	WorkerPoolSize    uint32 `json:"worker_pool_size"`      //工作池的数量
+	MaxWorkerTaskLen  uint32 `json:"max_worker_task_len"`   //worker对应的队列的最大长度
+	MaxMsgChanBuffLen uint32 `json:"max_msg_chan_buff_len"` //最大有缓冲读写goroutine通道的缓冲区大小
 }
 
 type Options func(config *Config)
@@ -66,6 +67,12 @@ func WithMaxWorkerTaskLen(size uint32) Options {
 	}
 }
 
+func WithMaxMsgChanBuffLen(size uint32) Options {
+	return func(o *Config) {
+		o.MaxMsgChanBuffLen = size
+	}
+}
+
 func NewOption(opts ...Options) *Config {
 	o := &Config{}
 	opts = append(defaultOptions(), opts...)
@@ -85,6 +92,7 @@ func defaultOptions() []Options {
 		WithMaxConn(20000),
 		WithWorkerPoolSize(10),
 		WithMaxWorkerTaskLen(1024),
+		WithMaxMsgChanBuffLen(1024),
 	}
 }
 

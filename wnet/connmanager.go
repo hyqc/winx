@@ -3,18 +3,21 @@ package wnet
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"winx/wiface"
 )
 
 type ConnManager struct {
 	connections map[uint32]wiface.IConnection
-	lock        sync.RWMutex
+	lock        *sync.RWMutex
+	length      atomic.Int64
 }
 
 func NewConnManager() *ConnManager {
 	return &ConnManager{
 		connections: make(map[uint32]wiface.IConnection),
-		lock:        sync.RWMutex{},
+		lock:        &sync.RWMutex{},
+		length:      atomic.Int64{},
 	}
 }
 
@@ -22,20 +25,20 @@ func (c *ConnManager) Add(conn wiface.IConnection) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.connections[conn.GetConnID()] = conn
-	fmt.Println("connection add to ConnManager successfully: conn num = ", c.Len())
+	c.length.Add(1)
+	SysPrintInfo("connection add to ConnManager successfully: conn num = ", c.Len())
 }
 
 func (c *ConnManager) Remove(conn wiface.IConnection) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	delete(c.connections, conn.GetConnID())
-	fmt.Println("connection remove to ConnManager successfully: conn num = ", c.Len())
+	c.length.Add(-1)
+	SysPrintInfo("connection remove to ConnManager successfully: conn num = ", c.Len())
 }
 
 func (c *ConnManager) Len() int {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	return len(c.connections)
+	return int(c.length.Load())
 }
 
 func (c *ConnManager) Get(connID uint32) (wiface.IConnection, error) {
@@ -54,5 +57,5 @@ func (c *ConnManager) ClearConn() {
 		conn.Stop()
 		delete(c.connections, connID)
 	}
-	fmt.Println("connection clea r to ConnManager successfully: conn num = ", c.Len())
+	SysPrintInfo("connection clea r to ConnManager successfully: conn num = ", c.Len())
 }

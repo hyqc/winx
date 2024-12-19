@@ -30,16 +30,16 @@ func NewPingRouter() *PingRouter {
 }
 
 func (p *PingRouter) PreHandle(request wiface.IRequest) {
-	fmt.Println(fmt.Sprintf("[SERVER] [INFO] PreHandle call, msgId: %v, msgData: %v", request.GetMsgID(), string(request.GetData())))
+	wnet.SysPrintInfo(fmt.Sprintf("PreHandle call, msgId: %v, msgData: %v", request.GetMsgID(), string(request.GetData())))
 }
 
 func (p *PingRouter) Handle(request wiface.IRequest) {
-	fmt.Println(fmt.Sprintf("[SERVER] [INFO] Handle call: 2"))
+	wnet.SysPrintInfo(fmt.Sprintf("Handle call: 2"))
 	if err := request.GetConnection().SendMsg(request.GetMsgID(), request.GetData()); err != nil {
-		fmt.Println("[SERVER] [ERROR] write to client failed, err: ", err)
+		wnet.SysPrintError("write to client failed, err: ", err)
 	}
 }
 
 func (p *PingRouter) PostHandle(request wiface.IRequest) {
-	fmt.Println(fmt.Sprintf("[SERVER] [INFO] PostHandle call: 3"))
+	wnet.SysPrintInfo(fmt.Sprintf(" PostHandle call: 3"))
 }

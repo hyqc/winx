@@ -23,7 +23,7 @@ func NewMsgHandle() *MsgHandle {
 func (m *MsgHandle) DoMsgHandler(request wiface.IRequest) {
 	handler, ok := m.ApisM[request.GetMsgID()]
 	if !ok {
-		fmt.Println("[SERVER] [ERROR] no handler for msgID: ", request.GetMsgID())
+		SysPrintError("no handler for msgID: ", request.GetMsgID())
 		return
 	}
 	handler.PreHandle(request)
@@ -33,14 +33,14 @@ func (m *MsgHandle) DoMsgHandler(request wiface.IRequest) {
 
 func (m *MsgHandle) AddRouter(msgId uint32, router wiface.IRouter) {
 	if _, ok := m.ApisM[msgId]; ok {
-		panic("[SERVER] [ERROR] msgID: " + fmt.Sprintf("%d", msgId) + " has been registered")
+		SysPrintPanic("msgID: " + fmt.Sprintf("%d", msgId) + " has been registered")
 	}
 	m.ApisM[msgId] = router
-	fmt.Println("[SERVER] [INFO] add router for msgID: ", msgId)
+	SysPrintInfo("add router for msgID: ", msgId)
 }
 
 func (m *MsgHandle) StartWorker(workerId int, taskQueue chan wiface.IRequest) {
-	fmt.Println(fmt.Sprintf("[SERVER] [INFO] worker id: %v is started", workerId))
+	SysPrintInfo(fmt.Sprintf("worker id: %v is started", workerId))
 	for {
 		select {
 		case req := <-taskQueue:

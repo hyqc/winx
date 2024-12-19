@@ -14,4 +14,6 @@ type IConnection interface {
 	GetConnection() net.Conn
 	// SendMsg 发包
 	SendMsg(msgId uint32, body []byte) error
+	// SendBuffMsg 发送带缓冲的消息
+	SendBuffMsg(msgId uint32, data []byte) error
 }

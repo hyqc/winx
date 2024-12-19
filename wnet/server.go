@@ -22,7 +22,9 @@ type Server struct {
 	IPVersion  string
 	msgHandler wiface.IMsgHandler
 	// 连接管理器
-	connManager wiface.IConnManager
+	connManager        wiface.IConnManager
+	afterConnStartHook func(wiface.IConnection)
+	beforeConnStopHook func(wiface.IConnection)
 }
 
 func NewServer(name string) wiface.IServer {
@@ -46,47 +48,53 @@ func (s *Server) GetConnMgr() wiface.IConnManager {
 }
 
 func (s *Server) Start() {
-	fmt.Println(fmt.Sprintf("[SERVER] [INFO] start server listener at ip: %s, port: %d", s.IP, s.Port))
-	fmt.Println(fmt.Sprintf("[SERVER] [INFO] server name: %s, host:port: %s:%d, version: %s ", s.Name, s.IP, s.Port, s.Version))
+	SysPrintInfo(fmt.Sprintf("start server listener at ip: %s, port: %d", s.IP, s.Port))
+	SysPrintInfo(fmt.Sprintf("server name: %s, host:port: %s:%d, version: %s ", s.Name, s.IP, s.Port, s.Version))
 
 	go func() {
+
 		//启动工作池
 		s.msgHandler.StartWorkerPool()
 		//监听服务地址
 		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
 		if err != nil {
-			fmt.Println("[SERVER] [ERROR] resolve tcp addr err: ", err)
+			SysPrintError("resolve tcp addr err: ", err)
 			return
 		}
 		listener, err := net.ListenTCP(s.IPVersion, addr)
 		if err != nil {
-			fmt.Println("[SERVER] [ERROR] listen", s.IPVersion, "err", err)
+			SysPrintError("listen ", s.IPVersion, "err", err)
 			return
 		}
+
 		//监听成功
-		fmt.Println(fmt.Sprintf("[SERVER] [INFO] listen tcp success, ip_version: %v, addr: %v", s.IPVersion, addr))
+		SysPrintInfo(fmt.Sprintf("listen tcp success, ip_version: %v, addr: %v", s.IPVersion, addr))
 		cid := uint32(0)
 		for {
 			tcpConn, err := listener.AcceptTCP()
 			if err != nil {
-				fmt.Println("[SERVER] [ERROR] accept tcp error: ", err)
-				continue
-			}
-			if s.connManager.Len() >= global.Conf.MaxConn {
-				_ = tcpConn.Close()
-				fmt.Println(fmt.Sprintf("[SERVER] [WARNING] accept tcp reached max: %v", global.Conf.MaxConn))
+				SysPrintError("accept tcp error: ", err)
 				continue
 			}
 
+			if s.connManager.Len() >= global.Conf.MaxConn {
+				_ = tcpConn.Close()
+				SysPrintError(fmt.Sprintf("accept tcp reached max: %v", global.Conf.MaxConn))
+				continue
+			}
+
+			SysPrintInfo(fmt.Sprintf("connid: %v", cid))
 			dealConn := NewConnection(s, tcpConn, cid, s.msgHandler)
 			cid++
+			SysPrintInfo(fmt.Sprintf("next connid: %v", cid))
+			Print(333)
 			go dealConn.Start()
 		}
 	}()
 }
 
 func (s *Server) Stop() {
-	fmt.Println("[SERVER] [INFO] server stop")
+	SysPrintInfo("server stop")
 	s.GetConnMgr().ClearConn()
 }
 
@@ -100,6 +108,26 @@ func (s *Server) Serve() {
 	signal.Notify(c, os.Interrupt)
 	select {
 	case <-c:
-		fmt.Println("[SERVER] [INFO] exit")
+		SysPrintInfo("exit")
+	}
+}
+
+func (s *Server) SetAfterConnStart(hookFunc func(wiface.IConnection)) {
+	s.afterConnStartHook = hookFunc
+}
+
+func (s *Server) SetBeforeConnStop(hookFunc func(wiface.IConnection)) {
+	s.beforeConnStopHook = hookFunc
+}
+
+func (s *Server) CallAfterConnStart(conn wiface.IConnection) {
+	if s.afterConnStartHook != nil {
+		s.afterConnStartHook(conn)
+	}
+}
+
+func (s *Server) CallBeforeConnStop(conn wiface.IConnection) {
+	if s.beforeConnStopHook != nil {
+		s.beforeConnStopHook(conn)
 	}
 }

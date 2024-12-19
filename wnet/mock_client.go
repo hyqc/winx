@@ -8,7 +8,7 @@ import (
 )
 
 func MockClient(network, addr string) {
-	fmt.Println("[CLIENT] [INFO]MockClient")
+	fmt.Println("[CLIENT] [INFO] mock client")
 	time.Sleep(time.Second * 5)
 	conn, err := net.Dial(network, addr)
 	if err != nil {
