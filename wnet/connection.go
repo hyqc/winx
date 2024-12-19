@@ -10,6 +10,8 @@ import (
 )
 
 type Connection struct {
+	// 当前连接属于哪个Server
+	Server wiface.IServer
 	//当前连接
 	Conn *net.TCPConn
 	// 当前连接的ID号，全局唯一
@@ -25,14 +27,17 @@ type Connection struct {
 }
 
 // NewConnection 创建连接的方法
-func NewConnection(conn *net.TCPConn, connID uint32, handler wiface.IMsgHandler) *Connection {
+func NewConnection(ser wiface.IServer, conn *net.TCPConn, connID uint32, handler wiface.IMsgHandler) *Connection {
 	c := &Connection{
+		Server:       ser,
 		Conn:         conn,
 		ConnID:       connID,
 		MsgHandler:   handler,
 		ExitBuffChan: make(chan bool, 1),
 		msgChan:      make(chan []byte),
 	}
+	// 将当前连接加入管理器
+	c.Server.GetConnMgr().Add(c)
 	return c
 }
 
@@ -100,6 +105,7 @@ func (c *Connection) StartWriter() {
 
 // Stop 停止连接
 func (c *Connection) Stop() {
+	fmt.Println("Conn Stop()...ConnID = ", c.ConnID)
 	if c.isClosed {
 		return
 	}
@@ -107,7 +113,11 @@ func (c *Connection) Stop() {
 
 	c.Conn.Close()
 	c.ExitBuffChan <- true
+
+	c.Server.GetConnMgr().Remove(c)
+
 	close(c.ExitBuffChan)
+	close(c.msgChan)
 }
 
 func (c *Connection) Start() {

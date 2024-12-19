@@ -21,21 +21,28 @@ type Server struct {
 	// tcp4 or other
 	IPVersion  string
 	msgHandler wiface.IMsgHandler
+	// 连接管理器
+	connManager wiface.IConnManager
 }
 
 func NewServer(name string) wiface.IServer {
 	s := &Server{
-		Name:       name,
-		IPVersion:  "tcp",
-		IP:         global.Conf.Host,
-		Port:       global.Conf.Port,
-		Version:    global.Conf.Version,
-		msgHandler: NewMsgHandle(),
+		Name:        name,
+		IPVersion:   "tcp",
+		IP:          global.Conf.Host,
+		Port:        global.Conf.Port,
+		Version:     global.Conf.Version,
+		msgHandler:  NewMsgHandle(),
+		connManager: NewConnManager(),
 	}
 	if s.Name == "" {
 		s.Name = global.Conf.Name
 	}
 	return s
+}
+
+func (s *Server) GetConnMgr() wiface.IConnManager {
+	return s.connManager
 }
 
 func (s *Server) Start() {
@@ -65,20 +72,26 @@ func (s *Server) Start() {
 				fmt.Println("[SERVER] [ERROR] accept tcp error: ", err)
 				continue
 			}
+			if s.connManager.Len() >= global.Conf.MaxConn {
+				_ = tcpConn.Close()
+				fmt.Println(fmt.Sprintf("[SERVER] [WARNING] accept tcp reached max: %v", global.Conf.MaxConn))
+				continue
+			}
 
-			dealConn := NewConnection(tcpConn, cid, s.msgHandler)
+			dealConn := NewConnection(s, tcpConn, cid, s.msgHandler)
 			cid++
 			go dealConn.Start()
 		}
 	}()
 }
 
-func (s *Server) AddRouter(msgId uint32, router wiface.IRouter) {
-	s.msgHandler.AddRouter(msgId, router)
-}
-
 func (s *Server) Stop() {
 	fmt.Println("[SERVER] [INFO] server stop")
+	s.GetConnMgr().ClearConn()
+}
+
+func (s *Server) AddRouter(msgId uint32, router wiface.IRouter) {
+	s.msgHandler.AddRouter(msgId, router)
 }
 
 func (s *Server) Serve() {

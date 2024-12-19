@@ -11,6 +11,9 @@ func main() {
 	s.AddRouter(1, NewPingRouter())
 
 	go wnet.MockClient("tcp", "127.0.0.1:8888")
+	go wnet.MockClient("tcp", "127.0.0.1:8888")
+	go wnet.MockClient("tcp", "127.0.0.1:8888")
+	go wnet.MockClient("tcp", "127.0.0.1:8888")
 
 	s.Serve()
 }
