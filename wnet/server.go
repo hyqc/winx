@@ -108,6 +108,7 @@ func (s *Server) Serve() {
 	signal.Notify(c, os.Interrupt)
 	select {
 	case <-c:
+		s.Stop()
 		SysPrintInfo("exit")
 	}
 }
